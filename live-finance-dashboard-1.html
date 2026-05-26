@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dave & Amber · Household Budget</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700&display=swap');
+:root{--bg:#0a0a0a;--surface:#141414;--border:#222;--text:#e8e8e8;--muted:#555;--yellow:#e8c547;--teal:#2ec4b6;--red:#ff6b6b;--sky:#38bdf8;--purple:#a29bfe;--green:#34d399;--orange:#f97316;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
+.mono{font-family:'DM Mono',monospace;}
+.header{border-bottom:1px solid var(--border);padding:20px 24px;display:flex;justify-content:space-between;align-items:center;}
+.header-title{font-size:17px;font-weight:700;}
+.header-sub{font-size:10px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;margin-top:2px;}
+.nw-value{font-size:20px;font-weight:700;font-family:'DM Mono',monospace;}
+.nw-label{font-size:10px;color:var(--muted);}
+.last-updated{font-size:10px;color:#333;margin-top:2px;}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px;}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--yellow);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:11px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;}
+.tabs{padding:16px 24px 0;display:flex;gap:4px;}
+.tab{padding:6px 16px;border-radius:100px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s;font-family:'DM Sans',sans-serif;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--yellow);color:#0a0a0a;}
+.content{padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
+.tab-panel{display:none;flex-direction:column;gap:16px;}
+.tab-panel.active{display:flex;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;}
+.section-title{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.grid-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;}
+@media(max-width:600px){.grid-4{grid-template-columns:1fr 1fr;}.grid-2{grid-template-columns:1fr;}.grid-3{grid-template-columns:1fr 1fr;}}
+.kpi-value{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;}
+.kpi-label{font-size:10px;color:var(--muted);margin-top:3px;}
+.c-yellow{color:var(--yellow);}.c-red{color:var(--red);}.c-sky{color:var(--sky);}.c-green{color:var(--green);}.c-orange{color:var(--orange);}.c-muted{color:var(--muted);}
+.row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.row-label{font-size:13px;color:#aaa;}
+.row-value{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;}
+.divider{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.bar-wrap{flex:1;height:5px;background:#222;border-radius:99px;overflow:hidden;margin:0 8px;}
+.bar-fill{height:100%;border-radius:99px;}
+.step-row{display:flex;align-items:center;gap:12px;padding:8px 10px;border-radius:10px;background:#1a1a1a;margin-bottom:6px;}
+.step-row.done{background:rgba(52,211,153,.08);}
+.step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:#2a2a2a;color:var(--muted);}
+.step-row.done .step-num{background:var(--green);color:#0a0a0a;}
+.step-text{font-size:12px;color:#aaa;}
+.step-row.done .step-text{color:var(--green);}
+.loan-card{background:#1a1a1a;border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.loan-name{font-size:13px;font-weight:600;}
+.loan-meta{display:flex;gap:16px;margin-top:5px;font-size:11px;color:var(--muted);flex-wrap:wrap;}
+.loan-meta span span{color:#bbb;}
+.snowball-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.snowball-num{width:24px;height:24px;border-radius:50%;background:var(--yellow);color:#0a0a0a;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.snowball-info{font-size:12px;color:#bbb;}
+.snowball-note{font-size:10px;color:#444;}
+.legend-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.legend-label{font-size:11px;color:#aaa;display:flex;align-items:center;gap:6px;}
+.legend-value{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;}
+.budget-bar-row{margin-bottom:12px;}
+.budget-bar-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;}
+.budget-bar-track{height:8px;background:#1e1e1e;border-radius:99px;overflow:hidden;}
+.budget-bar-fill{height:100%;border-radius:99px;}
+.error-box{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:12px;padding:20px;font-size:13px;color:var(--red);line-height:1.7;max-width:440px;margin:40px auto;}
+.refresh-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:5px 12px;border-radius:99px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+.refresh-btn:hover{border-color:var(--yellow);color:var(--yellow);}
+canvas{max-height:220px;}
+</style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Fetching your sheet...</div></div>
+<div id="app" style="display:none">
+  <div class="header">
+    <div><div class="header-title">Dave &amp; Amber</div><div class="header-sub">Household Budget &middot; <span id="last-date">-</span></div></div>
+    <div style="text-align:right"><div class="nw-value" id="nw-display">-</div><div class="nw-label">Net Worth</div><div class="last-updated" id="last-updated"></div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab" onclick="switchTab('networth',this)">Net Worth</button>
+    <button class="tab" onclick="switchTab('debt',this)">Debt</button>
+    <button class="tab" onclick="switchTab('budget',this)">Budget</button>
+  </div>
+  <div class="content">
+    <div class="tab-panel active" id="tab-overview">
+      <div class="grid-4">
+        <div class="card"><div class="kpi-value c-green" id="kpi-assets">-</div><div class="kpi-label">Total Assets</div></div>
+        <div class="card"><div class="kpi-value c-red" id="kpi-debt">-</div><div class="kpi-label">Total Debt</div></div>
+        <div class="card"><div class="kpi-value c-yellow" id="kpi-invest">-</div><div class="kpi-label">Investments</div></div>
+        <div class="card"><div class="kpi-value c-sky" id="kpi-cash">-</div><div class="kpi-label">Bank Cash</div></div>
+      </div>
+      <div class="card">
+        <div class="section-title">3 Financial Principles</div>
+        <div class="grid-3">
+          <div style="background:#1a1a1a;border-radius:12px;padding:14px;text-align:center"><div class="c-yellow" style="font-size:20px;font-weight:700;margin-bottom:6px">1</div><div style="font-size:11px;color:#bbb;line-height:1.4">Avoid Debt</div></div>
+          <div style="background:#1a1a1a;border-radius:12px;padding:14px;text-align:center"><div class="c-yellow" style="font-size:20px;font-weight:700;margin-bottom:6px">2</div><div style="font-size:11px;color:#bbb;line-height:1.4">Live on Less Than You Earn</div></div>
+          <div style="background:#1a1a1a;border-radius:12px;padding:14px;text-align:center"><div class="c-yellow" style="font-size:20px;font-weight:700;margin-bottom:6px">3</div><div style="font-size:11px;color:#bbb;line-height:1.4">Invest the Surplus</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="section-title">Bank Accounts</div><div id="bank-list"></div></div>
+      <div class="card"><div class="section-title">Credit Cards &middot; <span id="cc-total">-</span> total</div><div id="cc-list"></div></div>
+      <div class="card"><div class="section-title">Dave Ramsey Baby Steps</div><div id="baby-steps"></div></div>
+    </div>
+    <div class="tab-panel" id="tab-networth">
+      <div class="card"><div class="section-title">Net Worth Trend (2026)</div><canvas id="nw-chart"></canvas></div>
+      <div class="grid-2">
+        <div class="card"><div class="section-title">Asset Breakdown</div><div id="asset-list"></div></div>
+        <div class="card"><div class="section-title">Investments</div><div style="position:relative;height:160px;margin-bottom:12px"><canvas id="invest-chart"></canvas></div><div id="invest-legend"></div></div>
+      </div>
+    </div>
+    <div class="tab-panel" id="tab-debt">
+      <div class="card">
+        <div class="section-title">Debt Composition</div>
+        <div style="display:flex;align-items:center;gap:20px"><canvas id="debt-chart" width="150" height="150" style="width:150px;height:150px;max-height:150px;flex-shrink:0"></canvas><div style="flex:1" id="debt-legend"></div></div>
+        <hr class="divider" style="margin-top:16px">
+        <div class="grid-3" style="text-align:center;margin-top:12px">
+          <div><div class="kpi-value c-red" id="d-total">-</div><div class="kpi-label">Total Debt</div></div>
+          <div><div class="kpi-value c-yellow" id="d-nonmort">-</div><div class="kpi-label">Non-Mort/Student</div></div>
+          <div><div class="kpi-value c-orange" id="d-minpay">-</div><div class="kpi-label">Monthly Mins</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="section-title">Installment Loans</div><div id="loan-list"></div></div>
+      <div class="card"><div class="section-title">Debt Snowball Order</div><p style="font-size:11px;color:var(--muted);margin-bottom:12px">Smallest balance first (excl. mortgage &amp; student loans)</p><div id="snowball-list"></div></div>
+    </div>
+    <div class="tab-panel" id="tab-budget">
+      <div class="card">
+        <div class="section-title">Latest Month &middot; <span id="budget-month">-</span></div>
+        <div class="grid-3" style="margin-bottom:16px">
+          <div style="text-align:center"><div class="kpi-value c-sky" id="b-income">-</div><div class="kpi-label">Income</div></div>
+          <div style="text-align:center"><div class="kpi-value c-orange" id="b-actual">-</div><div class="kpi-label">Actual Bills</div></div>
+          <div style="text-align:center"><div class="kpi-value" id="b-pl">-</div><div class="kpi-label">Profit / Loss</div></div>
+        </div>
+        <div id="budget-bars"></div>
+        <hr class="divider">
+        <div class="row">
+          <div><div style="font-size:11px;color:var(--muted)">Beginning Balance</div><div class="row-value" id="b-begin">-</div></div>
+          <div style="text-align:right"><div style="font-size:11px;color:var(--muted)">Ending Balance</div><div class="row-value c-green" id="b-end">-</div></div>
+        </div>
+      </div>
+      <div class="card"><div class="section-title">Key Recurring Monthly Bills</div><div id="bills-list"></div></div>
+      <div class="card">
+        <div class="section-title">Housing Cost Ratio</div>
+        <div style="display:flex;align-items:center;gap:20px">
+          <div style="position:relative;width:96px;height:96px;flex-shrink:0">
+            <svg viewBox="0 0 36 36" width="96" height="96" style="transform:rotate(-90deg)">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#222" stroke-width="3.5"/>
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e8c547" stroke-width="3.5" stroke-dasharray="22.38 77.62" stroke-linecap="round"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--yellow)">22%</div>
+          </div>
+          <div style="font-size:12px;color:#bbb;line-height:1.6">Mortgage is <strong style="color:var(--yellow)">22.38%</strong> of household income - within the recommended 25-28% threshold.</div>
+        </div>
+      </div>
+      <div style="text-align:center"><button class="refresh-btn" onclick="loadData()">Refresh from Google Sheets</button></div>
+    </div>
+  </div>
+</div>
+<script>
+const SHEET_ID="1HF3-zXHq_4AQ2Ow5x04goIQWZzz-Bn2U7KXeHIJd3CA";
+const IC=["#2ec4b6","#e8c547","#f4a261","#ff6b6b","#a29bfe","#fd79a8","#55efc4"];
+const DC=["#e8c547","#f4a261","#2ec4b6","#ff6b6b","#a29bfe","#fd79a8"];
+const fmt=(n,d=0)=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",maximumFractionDigits:d}).format(n||0);
+const pa=s=>{if(!s)return 0;const str=String(s).replace(/[$,\s]/g,"").replace(/[()]/g,"");const n=parseFloat(str);return isNaN(n)?0:(String(s).trim().startsWith("(")?-n:n);};
+let CH={};
+const kc=id=>{if(CH[id]){CH[id].destroy();delete CH[id];}};
+function parseCSV(t){return t.trim().split("\n").map(l=>{const c=[];let cur="",q=false;for(const ch of l){if(ch==='"')q=!q;else if(ch===","&&!q){c.push(cur.trim());cur="";}else cur+=ch;}c.push(cur.trim());return c;});}
+async function fetchTab(tab){const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;const r=await fetch(url);if(!r.ok)throw new Error(`Tab "${tab}" failed (${r.status}). Make sure sheet is shared as Anyone with link.`);return parseCSV(await r.text());}
+const fRow=(rows,...kws)=>rows.find(r=>{const s=r.join(" ").toLowerCase();return kws.every(k=>s.includes(k.toLowerCase()));});
+const lv=(row,min=0)=>{if(!row)return 0;let last=0;for(const c of row){const v=pa(c);if(Math.abs(v)>min)last=v;}return last;};
+
+async function loadData(){
+  document.getElementById("loading").style.display="flex";
+  document.getElementById("loading-text").textContent="Fetching sheet data...";
+  document.getElementById("app").style.display="none";
+  try{
+    const[nw,dash,bud]=await Promise.all([fetchTab("Net Worth"),fetchTab("2026 Dashboard"),fetchTab("May 2026")]);
+    const g=(...kws)=>Math.abs(lv(fRow(nw,...kws),1));
+    const totalAssets=g("total assets")||386299;
+    const totalDebt=g("total liabilities")||426777;
+    const netWorth=lv(fRow(nw,"total net worth"))||-40479;
+    const totalInv=g("total investments")||23535;
+    const bankMap={"Joint MNT (4036)":g("joint mnt","4036")||6687,"Nest Egg (4460)":g("nest egg","4460")||10450,"Daycare Fund (4494)":g("daycare","4494")||3578,"Voya HSA":g("voya")||1721,"Amber Savings":g("amber savings")||250};
+    const totalCash=Object.values(bankMap).reduce((a,b)=>a+b,0);
+    const invMap={"Contractors 401K":g("contractors plan")||9220,"Gill Corp 401K":g("gill corp")||7347,"Amber Retirement":g("amber retirement")||3592,"Robinhood":g("robinhood")||2281,"Roth IRA":g("roth ira")||791,"SECU Savings":g("secu savings")||206,"Vanguard":(g("vangaurd")||g("vanguard"))||98};
+    const loans=[
+      {name:"Wingleaf Mortgage",  balance:g("mortgage balance","wingleaf")||245181,payment:1521.61,rate:"3.25%",remaining:306},
+      {name:"Amber Student Loan", balance:g("amber student loan")||120239,         payment:0,      rate:"6.80%",remaining:null},
+      {name:"Solar Loan (Mosaic)",balance:g("mosaic","solar")||33172,              payment:231,    rate:"5.99%",remaining:258},
+      {name:"BCECU Loan",         balance:g("bcecu loan")||14215,                  payment:463.31, rate:"7.90%",remaining:35},
+      {name:"HVAC Loan (APGFCU)", balance:g("hvac loan")||9187,                    payment:201,    rate:"8.84%",remaining:56},
+      {name:"Dave Student Loan",  balance:g("dave fed loan")||2714,                payment:115.58, rate:"4.25%",remaining:23},
+    ];
+    const totalCC=Math.abs(lv(fRow(nw,"total cc debt"),1))||2069;
+    const nonMort=Math.abs(lv(fRow(nw,"non mortgage non student"),1))||23403;
+
+    // trend
+    let hist=[];
+    const si=dash.findIndex(r=>r[0]?.toLowerCase().includes("summary"));
+    const ai=dash.findIndex(r=>r[0]?.toLowerCase().includes("total assets"));
+    const di=dash.findIndex(r=>r[0]?.toLowerCase().includes("total debt"));
+    const ni=dash.findIndex(r=>r[0]?.toLowerCase().includes("net worth"));
+    if(si>=0&&ai>=0){const hdr=dash[si],ar=dash[ai]||[],dr=dash[di]||[],nr=dash[ni]||[];for(let i=1;i<hdr.length;i++){const lbl=hdr[i],a=pa(ar[i]),d=Math.abs(pa(dr[i])),n=pa(nr[i]);if(lbl&&(a>1000||d>1000))hist.push({date:lbl,assets:a,debt:d,nw:n});}}
+
+    // budget
+    const h0=bud[0]||[];
+    const month=h0[0]||"May 2026";
+    const sub=fRow(bud,"subtotal of bills");
+    const br=fRow(bud,"beginning balance");
+    const ir=fRow(bud,"total monthly income")||fRow(bud,"total income");
+    const pr=fRow(bud,"profit/loss")||fRow(bud,"surplus");
+    const budget={month,budgeted:pa(sub?.[3])||7759,actual:pa(sub?.[4])||3809,income:Math.abs(lv(ir,100))||6755,begin:pa(br?.[2])||5691,end:pa(br?.[4])||8637,pl:pa(pr?.[pr?.length-1])||2946};
+
+    render({totalAssets,totalDebt,netWorth,totalInv,totalCash,bankMap,totalCC,hist,invMap,loans,budget,nonMort});
+    document.getElementById("last-updated").textContent="Updated "+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  }catch(e){
+    document.getElementById("loading").innerHTML=`<div class="error-box"><strong>Could not load sheet</strong><br><br>${e.message}<br><br><button class="refresh-btn" onclick="loadData()">Try Again</button></div>`;
+  }
+}
+
+function render({totalAssets,totalDebt,netWorth,totalInv,totalCash,bankMap,totalCC,hist,invMap,loans,budget,nonMort}){
+  const el=document.getElementById("nw-display");
+  el.textContent=fmt(netWorth);el.className="nw-value mono "+(netWorth>=0?"c-green":"c-red");
+  document.getElementById("last-date").textContent=new Date().toLocaleDateString("en-US",{month:"long",year:"numeric"});
+  document.getElementById("kpi-assets").textContent=fmt(totalAssets);
+  document.getElementById("kpi-debt").textContent=fmt(totalDebt);
+  document.getElementById("kpi-invest").textContent=fmt(totalInv);
+  document.getElementById("kpi-cash").textContent=fmt(totalCash);
+  document.getElementById("bank-list").innerHTML=Object.entries(bankMap).map(([k,v])=>`<div class="row"><span class="row-label">${k}</span><span class="row-value c-yellow">${fmt(v,2)}</span></div>`).join("")+`<hr class="divider"><div class="row"><span style="font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.1em;text-transform:uppercase">Total</span><span class="row-value">${fmt(totalCash,2)}</span></div>`;
+  const ccData=[{name:"Sweetwater",balance:648.99,limit:5000,rate:"0% (48mo)"},{name:"Chase SW (3674)",balance:519.72,limit:10200,rate:"27.99%"},{name:"Amazon Store",balance:476.51,limit:8000,rate:"28.24%"},{name:"WAWA Mastercard",balance:323.13,limit:4500,rate:"-"},{name:"PayPal Credit",balance:85.90,limit:10000,rate:"30.39%"},{name:"Citi",balance:14.67,limit:7900,rate:"22.99%"}];
+  document.getElementById("cc-total").textContent=fmt(totalCC,2);
+  document.getElementById("cc-list").innerHTML=ccData.map(c=>{const p=Math.min((c.balance/c.limit)*100,100),col=p>30?"#ff6b6b":"#2ec4b6";return`<div style="margin-bottom:10px"><div class="row" style="margin-bottom:4px"><span style="font-size:12px;color:#aaa">${c.name}</span><span style="font-size:12px;font-weight:700;font-family:'DM Mono',monospace">${fmt(c.balance,2)}</span></div><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${p.toFixed(1)}%;background:${col}"></div></div><span style="font-size:10px;color:var(--muted);width:36px;text-align:right">${p.toFixed(1)}%</span><span style="font-size:10px;color:#333;width:70px;text-align:right">${c.rate}</span></div></div>`;}).join("");
+  document.getElementById("baby-steps").innerHTML=[{text:"Save $1,000 Emergency Fund",done:totalCash>=1000},{text:"Pay off Debt (Debt Snowball)",done:false},{text:"Save 3-6 Months of Expenses",done:false},{text:"Invest 15% of Income in Retirement",done:false},{text:"Save for College Fund",done:false},{text:"Pay off Home Early",done:false},{text:"Build Wealth and Give",done:false}].map((s,i)=>`<div class="step-row ${s.done?"done":""}"><div class="step-num">${s.done?"v":i+1}</div><div class="step-text">${s.text}</div></div>`).join("");
+  kc("nw");
+  if(hist.length>1)CH["nw"]=new Chart(document.getElementById("nw-chart").getContext("2d"),{type:"line",data:{labels:hist.map(d=>d.date),datasets:[{label:"Net Worth",data:hist.map(d=>d.nw),borderColor:"#e8c547",borderWidth:2,pointRadius:0,tension:.3},{label:"Assets",data:hist.map(d=>d.assets),borderColor:"#2ec4b6",borderWidth:1.5,pointRadius:0,tension:.3,borderDash:[4,2]},{label:"Debt",data:hist.map(d=>d.debt),borderColor:"#ff6b6b",borderWidth:1.5,pointRadius:0,tension:.3,borderDash:[4,2]}]},options:{responsive:true,plugins:{legend:{labels:{color:"#666",font:{size:11},boxWidth:16}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw)}`}}},scales:{x:{ticks:{color:"#555",font:{size:10}},grid:{color:"#1a1a1a"}},y:{ticks:{color:"#555",font:{size:10},callback:v=>`$${(v/1000).toFixed(0)}k`},grid:{color:"#1a1a1a"}}}}});
+  document.getElementById("asset-list").innerHTML=[{label:"608 Wingleaf Home",value:330000,color:"#e8c547"},{label:"Investments",value:totalInv,color:"#2ec4b6"},{label:"Bank Accounts",value:totalCash,color:"#a29bfe"},{label:"Vehicles",value:9900,color:"#f4a261"},{label:"Voya HSA",value:bankMap["Voya HSA"]||1721,color:"#55efc4"}].map(a=>`<div class="legend-row"><div class="legend-label"><div class="legend-dot" style="background:${a.color}"></div>${a.label}</div><div class="legend-value" style="color:${a.color}">${fmt(a.value)}</div></div>`).join("")+`<hr class="divider"><div class="legend-row"><div class="legend-label c-muted" style="font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:10px">Total</div><div class="legend-value c-green">${fmt(totalAssets)}</div></div>`;
+  const ie=Object.entries(invMap).filter(([,v])=>v>0);
+  kc("invest");CH["invest"]=new Chart(document.getElementById("invest-chart").getContext("2d"),{type:"doughnut",data:{labels:ie.map(([k])=>k),datasets:[{data:ie.map(([,v])=>v),backgroundColor:IC,borderWidth:0}]},options:{cutout:"60%",responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}}}});
+  document.getElementById("invest-legend").innerHTML=ie.map(([k,v],i)=>`<div class="legend-row"><div class="legend-label"><div class="legend-dot" style="background:${IC[i]}"></div>${k}</div><div class="legend-value" style="color:${IC[i]}">${fmt(v)}</div></div>`).join("");
+  const db=[{name:"Mortgage",value:loans[0].balance,color:"#e8c547"},{name:"Student Loans",value:loans[1].balance+loans[5].balance,color:"#f4a261"},{name:"Solar Loan",value:loans[2].balance,color:"#2ec4b6"},{name:"BCECU Loan",value:loans[3].balance,color:"#ff6b6b"},{name:"HVAC Loan",value:loans[4].balance,color:"#a29bfe"},{name:"Credit Cards",value:totalCC,color:"#fd79a8"}];
+  kc("debt");CH["debt"]=new Chart(document.getElementById("debt-chart").getContext("2d"),{type:"doughnut",data:{labels:db.map(d=>d.name),datasets:[{data:db.map(d=>d.value),backgroundColor:db.map(d=>d.color),borderWidth:0}]},options:{cutout:"60%",responsive:false,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}}}});
+  document.getElementById("debt-legend").innerHTML=db.map(d=>`<div class="legend-row"><div class="legend-label"><div class="legend-dot" style="background:${d.color}"></div>${d.name}</div><div class="legend-value" style="color:${d.color}">${((d.value/totalDebt)*100).toFixed(1)}%</div></div>`).join("");
+  document.getElementById("d-total").textContent=fmt(totalDebt);document.getElementById("d-nonmort").textContent=fmt(nonMort);document.getElementById("d-minpay").textContent=fmt(2532.50);
+  document.getElementById("loan-list").innerHTML=loans.map(l=>`<div class="loan-card"><div class="row" style="margin-bottom:0"><div class="loan-name">${l.name}</div><div class="row-value c-red">${fmt(l.balance)}</div></div><div class="loan-meta"><span>Rate: <span>${l.rate}</span></span><span>Payment: <span>${fmt(l.payment,2)}/mo</span></span><span>Payoff: <span>${l.remaining?(l.remaining/12).toFixed(1)+"yr":"IBR"}</span></span></div></div>`).join("");
+  const sb=[{name:"Credit Cards",balance:totalCC,note:"Highest rate first"},{name:"Dave Student Loan",balance:loans[5].balance,note:`${loans[5].remaining} payments remaining`},{name:"HVAC Loan",balance:loans[4].balance,note:`${loans[4].remaining} payments remaining`},{name:"BCECU Loan",balance:loans[3].balance,note:`${loans[3].remaining} payments remaining`},{name:"Solar Loan",balance:loans[2].balance,note:`${loans[2].remaining} payments remaining`}].sort((a,b)=>a.balance-b.balance);
+  document.getElementById("snowball-list").innerHTML=sb.map((s,i)=>`<div class="snowball-row"><div class="snowball-num">${i+1}</div><div><div class="snowball-info">${s.name} - <span class="c-red">${fmt(s.balance)}</span></div><div class="snowball-note">${s.note}</div></div></div>`).join("");
+  document.getElementById("budget-month").textContent=budget.month;document.getElementById("b-income").textContent=fmt(budget.income);document.getElementById("b-actual").textContent=fmt(budget.actual);
+  const pe=document.getElementById("b-pl");pe.textContent=fmt(Math.abs(budget.pl));pe.className="kpi-value mono "+(budget.pl>=0?"c-green":"c-red");
+  document.getElementById("b-begin").textContent=fmt(budget.begin,2);document.getElementById("b-end").textContent=fmt(budget.end,2);
+  const mx=Math.max(budget.income,budget.budgeted,budget.actual,1);
+  document.getElementById("budget-bars").innerHTML=[{label:"Income",value:budget.income,color:"#38bdf8"},{label:"Budgeted Bills",value:budget.budgeted,color:"#f97316"},{label:"Actual Bills",value:budget.actual,color:"#34d399"}].map(b=>`<div class="budget-bar-row"><div class="budget-bar-label"><span style="color:#aaa">${b.label}</span><span style="font-family:'DM Mono',monospace;font-weight:700">${fmt(b.value,2)}</span></div><div class="budget-bar-track"><div class="budget-bar-fill" style="width:${(b.value/mx*100).toFixed(1)}%;background:${b.color}"></div></div></div>`).join("");
+  const bills=[{name:"Mortgage (608 Wingleaf)",amt:loans[0].payment},{name:"Daycare (4 wks)",amt:1140},{name:"Amber Student Loan",amt:405},{name:"BCECU Loan",amt:loans[3].payment},{name:"Solar Loan",amt:loans[2].payment},{name:"State Farm Insurance",amt:237.60},{name:"BGE (Electric)",amt:400},{name:"HVAC Loan",amt:loans[4].payment},{name:"WAWA Gas",amt:300},{name:"FiOS Internet",amt:79.99},{name:"Dave Student Loan",amt:loans[5].payment}];
+  const bt=bills.reduce((a,b)=>a+b.amt,0);
+  document.getElementById("bills-list").innerHTML=bills.map(b=>`<div class="row"><span class="row-label">${b.name}</span><span class="row-value">${fmt(b.amt,2)}</span></div>`).join("")+`<hr class="divider"><div class="row"><span style="font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.1em">Subtotal</span><span class="row-value c-red">${fmt(bt,2)}</span></div>`;
+  document.getElementById("loading").style.display="none";document.getElementById("app").style.display="block";
+}
+function switchTab(name,btn){document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(p=>p.classList.remove("active"));btn.classList.add("active");document.getElementById("tab-"+name).classList.add("active");}
+loadData();
+</script>
+</body>
+</html>
